@@ -1,0 +1,60 @@
+{
+  "date": "2026-02-22",
+  "entries": [
+    {
+      "time": "07:29",
+      "category": "decision",
+      "text": "Email sending capability added to Janet via SMTP through janet.bot88@gmail.com. Draft-first approach — always confirm with KS before sending."
+    },
+    {
+      "time": "07:37",
+      "category": "decision",
+      "text": "KS plays polo every Sunday 7:55-9:00am — added as weekly recurring calendar event"
+    },
+    {
+      "time": "08:49",
+      "category": "health",
+      "text": "Started Mounjaro last Tuesday (Feb 17). Felt nauseous during polo match today — likely combination of medication adjustment period and not eating enough before exercise. About 1 week into treatment."
+    },
+    {
+      "time": "08:49",
+      "category": "health",
+      "text": "I started taking Monjaro last Tuesday and noticed nausea during my polo match, possibly due to not eating enough before the game. I need to adjust my meal timing around the medication to avoid discomfort during physical activity."
+    },
+    {
+      "time": "08:54",
+      "category": "decision",
+      "text": "Standardized on launchd (com.refinery.janetbot) as the sole way to run the bot — no more manual node bot.js starts. Added duplicate process guard to bot.js startup that kills any existing bot.js processes before initializing."
+    },
+    {
+      "time": "09:11",
+      "category": "decision",
+      "text": "Cleared stale reminders (Improve Janet, Health Update). Set up weekly Mounjaro check-in at Sunday 6pm, daily 9pm Claude usage report (percentage only), and health check reminder for March 8."
+    },
+    {
+      "time": "11:07",
+      "category": "idea",
+      "text": "Audit MCP connections and skills — currently only Oura and Granola. Evaluate Google Calendar, Gmail, GitHub, Google Drive, Brave Search MCPs for gaps in KS's workflow"
+    },
+    {
+      "time": "11:42",
+      "category": "decision",
+      "text": "Current custom integrations (calendar, email, search) are better than MCPs for context efficiency — MCPs add tool definitions to every conversation. Keep MCPs only for dynamic mid-conversation queries (Oura, Granola)."
+    },
+    {
+      "time": "11:44",
+      "category": "decision",
+      "text": "Janet must always present advantages AND disadvantages when proposing changes. Never suggest replacing something that already works unless the replacement is clearly superior. Lead with tradeoffs, not features."
+    },
+    {
+      "time": "11:48",
+      "category": "decision",
+      "text": "KS approved weekly health trends correlation feature — cross-reference Oura sleep/readiness data with journal entries (late meals, stress, polo, Mounjaro) to identify personal patterns. Deliver Sunday 6pm with Mounjaro check-in."
+    },
+    {
+      "time": "12:01",
+      "category": "idea",
+      "text": "YouTube video pipeline — download via yt-dlp, transcribe via Whisper locally on Mac Mini, then summarize/extract workflows via Claude. Would only capture audio, not visual content."
+    }
+  ]
+}

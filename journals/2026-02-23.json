@@ -1,0 +1,20 @@
+{
+  "date": "2026-02-23",
+  "entries": [
+    {
+      "time": "08:52",
+      "category": "issue",
+      "text": "Dog Pixie diagnosed with colitis after emergency vet visit overnight. Caused disrupted sleep (score 69, restfulness 29)."
+    },
+    {
+      "time": "09:30",
+      "category": "followup",
+      "text": "Mediacorp New VP Project briefing — KS receiving brief to quote on new vertical project. Recording on Granola for reference."
+    },
+    {
+      "time": "16:01",
+      "category": "issue",
+      "text": "Janet repeatedly asked about bot restart for health trends correlation without checking that the restart had already been completed — need better state awareness across sessions"
+    }
+  ]
+}

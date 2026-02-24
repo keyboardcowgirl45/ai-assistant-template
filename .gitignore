@@ -1,0 +1,8 @@
+node_modules/
+.env
+memory.json
+memory-archive-*.json
+logs/
+bot.log
+google-credentials.json
+google-token.json

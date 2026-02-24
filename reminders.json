@@ -1,0 +1,89 @@
+[
+  {
+    "id": "mlvx6090",
+    "text": "Look into Oura Ring API integration for KS health tracking",
+    "created": "2026-02-21T06:09:58.212Z",
+    "due": null,
+    "done": true,
+    "completedAt": "2026-02-21T07:38:40.193Z"
+  },
+  {
+    "id": "mlw0a9a7",
+    "text": "Look into Oura Ring API integration for KS health tracking",
+    "created": "2026-02-21T07:37:15.391Z",
+    "due": null,
+    "done": true,
+    "completedAt": "2026-02-21T07:55:42.593Z"
+  },
+  {
+    "id": "mlw3l1sv",
+    "text": "Improve Janet - fix web search detection, add Oura context injection, add long-term memory",
+    "created": "2026-02-21T09:09:37.759Z",
+    "due": null,
+    "done": true,
+    "completedAt": "2026-02-22T01:11:28.147Z"
+  },
+  {
+    "id": "mlw5u2fu",
+    "text": "Optimize context loading strategy",
+    "created": "2026-02-21T10:12:37.722Z",
+    "due": "2023-10-15",
+    "done": true,
+    "completedAt": "2026-02-21T10:14:43.082Z"
+  },
+  {
+    "id": "mlw5vw87",
+    "text": "Optimize context loading architecture",
+    "created": "2026-02-21T10:14:02.983Z",
+    "due": "2023-10-15",
+    "done": true,
+    "completedAt": "2026-02-21T10:14:43.083Z"
+  },
+  {
+    "id": "mlw5xizv",
+    "text": "Optimize context loading architecture",
+    "created": "2026-02-21T10:15:19.147Z",
+    "due": "2023-10-15",
+    "done": true,
+    "completedAt": "2026-02-21T10:17:06.765Z"
+  },
+  {
+    "id": "mlw61bq1",
+    "text": "Double reply fix confirmed",
+    "created": "2026-02-21T10:18:16.345Z",
+    "due": "2023-10-15",
+    "done": true,
+    "completedAt": "2026-02-22T00:54:24.830Z"
+  },
+  {
+    "id": "mlw6ryd9",
+    "text": "Get Granola API token from MacBook — DevTools > Network > Authorization header, give to Janet for .env setup",
+    "created": "2026-02-21T10:38:58.749Z",
+    "due": null,
+    "done": true,
+    "completedAt": "2026-02-21T14:34:54.349Z"
+  },
+  {
+    "id": "mlwynh38",
+    "text": "Double reply glitch",
+    "created": "2026-02-21T23:39:18.980Z",
+    "due": "2025-04-05",
+    "done": true,
+    "completedAt": "2026-02-22T00:54:24.831Z"
+  },
+  {
+    "id": "mlx16alk",
+    "text": "Health Update",
+    "created": "2026-02-22T00:49:56.264Z",
+    "due": "2025-04-05",
+    "done": true,
+    "completedAt": "2026-02-22T01:11:28.147Z"
+  },
+  {
+    "id": "mlx1xzf6",
+    "text": "Book health check appointment",
+    "created": "2026-02-22T01:11:28.146Z",
+    "due": "2026-03-08",
+    "done": false
+  }
+]

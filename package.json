@@ -1,0 +1,15 @@
+{
+  "name": "discord-bot",
+  "version": "1.0.0",
+  "description": "Janet — Karen's personal AI assistant on Discord",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.5.0",
+    "googleapis": "^144.0.0",
+    "nodemailer": "^8.0.1"
+  }
+}
