@@ -125,6 +125,11 @@
       "time": "21:14",
       "category": "decision",
       "text": "KS decided personal data in git repo is acceptable for now (private repo). File permissions fixed to 600 on .env, google-credentials.json, google-token.json, ~/.mcp.json"
+    },
+    {
+      "time": "21:18",
+      "category": "decision",
+      "text": "Nightly midnight git auto-commit and push added to bot.js scheduled tasks — backs up all daily changes to private GitHub repo automatically"
     }
   ]
 }
