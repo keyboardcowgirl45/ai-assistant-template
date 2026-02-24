@@ -100,6 +100,31 @@
       "time": "20:50",
       "category": "decision",
       "text": "Completed memsearch memory system installation — Ollama nomic-embed-text for local embeddings, Milvus Lite vector DB, 22 chunks indexed across MEMORY.md and 4 daily logs. Wired into bot.js for semantic search on every message. Pending bot restart to go live."
+    },
+    {
+      "time": "21:03",
+      "category": "decision",
+      "text": "Set up git repo for Janet's discord-bot codebase — private repo at keyboardcowgirl45/janet-discord-bot on GitHub, secrets excluded via .gitignore"
+    },
+    {
+      "time": "21:05",
+      "category": "decision",
+      "text": "KS wants Janet to proactively research OpenClaw and AI assistant improvements weekly, then propose relevant upgrades — not wait for KS to ask"
+    },
+    {
+      "time": "21:05",
+      "category": "idea",
+      "text": "Weekly Saturday research sweep — automated Brave Search for OpenClaw updates, Claude Code agent patterns, memory system innovations — compiled into actionable proposals for KS"
+    },
+    {
+      "time": "21:12",
+      "category": "issue",
+      "text": "Security audit revealed: no Discord user auth (anyone on shared server can interact), macOS firewall disabled, sensitive files world-readable, personal data committed to git"
+    },
+    {
+      "time": "21:14",
+      "category": "decision",
+      "text": "KS decided personal data in git repo is acceptable for now (private repo). File permissions fixed to 600 on .env, google-credentials.json, google-token.json, ~/.mcp.json"
     }
   ]
 }

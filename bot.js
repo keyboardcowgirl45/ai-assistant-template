@@ -662,6 +662,29 @@ function checkScheduledBriefings() {
     _briefingsSentToday.clear();
   }
 
+  // Midnight — auto git commit & push
+  if (hour === 0 && minute >= 0 && minute <= 5) {
+    const gitKey = `${dateKey}-git-push`;
+    if (!_briefingsSentToday.has(gitKey)) {
+      _briefingsSentToday.add(gitKey);
+      try {
+        const botDir = path.join(__dirname);
+        const status = execSync('git status --porcelain', { cwd: botDir, encoding: 'utf8' }).trim();
+        if (status) {
+          execSync('git add -A', { cwd: botDir });
+          const dateStr = new Date().toISOString().split('T')[0];
+          execSync(`git commit -m "auto: nightly backup ${dateStr}"`, { cwd: botDir });
+          execSync('git push', { cwd: botDir });
+          console.log(`[git] Nightly push completed: ${dateStr}`);
+        } else {
+          console.log('[git] Nightly push skipped — no changes');
+        }
+      } catch (err) {
+        console.error(`[git] Nightly push failed: ${err.message}`);
+      }
+    }
+  }
+
   // 7:30am — Sleep briefing
   if (hour === 7 && minute >= 25 && minute <= 35) {
     const key = `${dateKey}-sleep`;
