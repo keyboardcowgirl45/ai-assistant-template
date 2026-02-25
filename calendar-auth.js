@@ -10,7 +10,10 @@ const { google } = require('googleapis');
 
 const CREDENTIALS_FILE = path.join(__dirname, 'google-credentials.json');
 const TOKEN_FILE = path.join(__dirname, 'google-token.json');
-const SCOPES = ['https://www.googleapis.com/auth/calendar'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/drive.readonly',
+];
 const PORT = 3000;
 
 async function authorize() {
@@ -78,7 +81,7 @@ async function authorize() {
 
 authorize()
   .then(() => {
-    console.log('\nGoogle Calendar is ready! Restart the bot to enable calendar features.');
+    console.log('\nGoogle Calendar + Drive authorized! Restart the bot to enable new features.');
     process.exit(0);
   })
   .catch((err) => {

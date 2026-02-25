@@ -4,7 +4,10 @@ const { google } = require('googleapis');
 
 const CREDENTIALS_FILE = path.join(__dirname, 'google-credentials.json');
 const TOKEN_FILE = path.join(__dirname, 'google-token.json');
-const SCOPES = ['https://www.googleapis.com/auth/calendar'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/drive.readonly',
+];
 
 let _auth = null;
 
@@ -255,10 +258,51 @@ async function createEvent({ summary, date, startTime, endTime, location, descri
 }
 
 /**
+ * Delete a calendar event by its ID.
+ */
+async function deleteEvent(eventId) {
+  const auth = getAuth();
+  if (!auth) return { success: false, error: 'Calendar not configured' };
+
+  const calendar = google.calendar({ version: 'v3', auth });
+  try {
+    await calendar.events.delete({ calendarId: 'primary', eventId });
+    console.log(`[calendar] Deleted event: ${eventId}`);
+    return { success: true };
+  } catch (err) {
+    console.error(`[calendar] Error deleting event: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * List events in a date range, returning raw event data including IDs.
+ */
+async function listEvents(startDate, endDate) {
+  const auth = getAuth();
+  if (!auth) return [];
+
+  const calendar = google.calendar({ version: 'v3', auth });
+  try {
+    const res = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: new Date(`${startDate}T00:00:00+08:00`).toISOString(),
+      timeMax: new Date(`${endDate}T23:59:59+08:00`).toISOString(),
+      singleEvents: true,
+      orderBy: 'startTime',
+    });
+    return res.data.items || [];
+  } catch (err) {
+    console.error(`[calendar] Error listing events: ${err.message}`);
+    return [];
+  }
+}
+
+/**
  * Check if calendar is configured and ready.
  */
 function isAvailable() {
   return getAuth() !== null;
 }
 
-module.exports = { getTodayEvents, getUpcomingEvents, getTomorrowEvents, createEvent, formatForPrompt, isAvailable };
+module.exports = { getTodayEvents, getUpcomingEvents, getTomorrowEvents, createEvent, deleteEvent, listEvents, formatForPrompt, isAvailable };

@@ -35,6 +35,8 @@ const { formatForPrompt: formatDeadlines, formatForHeartbeat: getHeartbeatDeadli
 const { formatForPrompt: formatIdeas, processResponse: processIdeas } = require('./ideas.js');
 const { sendEmail } = require('./email.js');
 const { searchMemory, formatForPrompt: formatMemsearch, syncJournalToMarkdown } = require('./memsearch-bridge.js');
+const { getWeather, formatForPrompt: formatWeather, needsWeather } = require('./weather.js');
+const { getRecentEmails, formatForPrompt: formatGmail, needsEmail } = require('./gmail-reader.js');
 // Granola: now handled via MCP tools directly — no context injection needed
 
 // --- Context detection (only fetch expensive data when relevant) ---
@@ -116,7 +118,7 @@ function loadPromptFiles() {
 /**
  * Build the full prompt with all context.
  */
-function buildPrompt(personality, history, searchResults, reminders, calendarContext, username, userMessage, extra, ouraContext, healthTrendsContext, memsearchContext) {  const now = new Date().toLocaleString("en-SG", { timeZone: "Asia/Singapore", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
+function buildPrompt(personality, history, searchResults, reminders, calendarContext, username, userMessage, extra, ouraContext, healthTrendsContext, memsearchContext, weatherContext, gmailContext) {  const now = new Date().toLocaleString("en-SG", { timeZone: "Asia/Singapore", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
   const parts = [personality, `\nCurrent date and time: ${now} SGT`];
   if (reminders) {
     parts.push(`\n--- ACTIVE REMINDERS ---\n${reminders}\n--- END REMINDERS ---`);
@@ -129,6 +131,12 @@ function buildPrompt(personality, history, searchResults, reminders, calendarCon
   }
   if (healthTrendsContext) {
     parts.push(`\n--- HEALTH TRENDS ---\n${healthTrendsContext}\n--- END HEALTH TRENDS ---`);
+  }
+  if (weatherContext) {
+    parts.push(`\n--- WEATHER ---\n${weatherContext}\n--- END WEATHER ---`);
+  }
+  if (gmailContext) {
+    parts.push(`\n--- RECENT EMAILS ---\n${gmailContext}\n--- END EMAILS ---`);
   }
   const deadlinesContext = formatDeadlines();
   if (deadlinesContext) {
@@ -408,6 +416,26 @@ client.on('messageCreate', async (message) => {
 
     // Granola: handled via MCP tools — Claude queries directly when needed
 
+    // Weather (only when asking about weather/outdoor activities)
+    if (needsWeather(userMessage)) {
+      console.log('[bot] Weather context requested');
+      asyncFetches.push(
+        getWeather()
+          .then(data => ({ type: 'weather', value: data ? formatWeather(data) : '' }))
+          .catch(err => { console.warn(`[bot] Weather fetch failed: ${err.message}`); return { type: 'weather', value: '' }; })
+      );
+    }
+
+    // Gmail inbox (only when asking about emails)
+    if (needsEmail(userMessage)) {
+      console.log('[bot] Gmail inbox context requested');
+      asyncFetches.push(
+        getRecentEmails(2, 10)
+          .then(emails => ({ type: 'gmail', value: formatGmail(emails) }))
+          .catch(err => { console.warn(`[bot] Gmail fetch failed: ${err.message}`); return { type: 'gmail', value: '' }; })
+      );
+    }
+
     // Semantic memory search (always — lightweight, local)
     asyncFetches.push(
       searchMemory(userMessage, 5)
@@ -431,12 +459,16 @@ client.on('messageCreate', async (message) => {
     let searchResults = null;
     let healthTrendsContext = '';
     let memsearchContext = '';
+    let weatherContext = '';
+    let gmailContext = '';
     for (const r of results) {
       if (r.type === 'calendar') calendarContext = r.value;
       else if (r.type === 'oura') ouraContext = r.value;
       else if (r.type === 'search') searchResults = r.value;
       else if (r.type === 'healthTrends') healthTrendsContext = r.value;
       else if (r.type === 'memsearch') memsearchContext = r.value;
+      else if (r.type === 'weather') weatherContext = r.value;
+      else if (r.type === 'gmail') gmailContext = r.value;
     }
 
     // Reminder + calendar instructions for Claude
@@ -489,7 +521,7 @@ When KS asks you to send an email, embed this tag in your response:
 - NEVER send an email without KS explicitly asking you to. Always confirm what you're about to send before embedding the tag.
 - If KS asks you to draft an email, show her the draft first and only send when she approves`;
 
-    const fullPrompt = buildPrompt(personality, history, searchResults, reminders, calendarContext, username, userMessage, reminderInstructions, ouraContext, healthTrendsContext, memsearchContext);
+    const fullPrompt = buildPrompt(personality, history, searchResults, reminders, calendarContext, username, userMessage, reminderInstructions, ouraContext, healthTrendsContext, memsearchContext, weatherContext, gmailContext);
 
     const startTime = Date.now();
     const { text: rawResponse, source } = await getAIResponse(fullPrompt);

@@ -1,0 +1,65 @@
+{
+  "date": "2026-02-25",
+  "entries": [
+    {
+      "time": "07:41",
+      "category": "issue",
+      "text": "Gym training calendar events were supposed to be recurring Mon/Wed 10-11am but were not on KS's calendar — recreated manually for next several weeks"
+    },
+    {
+      "time": "07:42",
+      "category": "decision",
+      "text": "KS wants recurring gym training blocks on Mondays and Wednesdays 10:00-11:00am — set up for next 4 weeks"
+    },
+    {
+      "time": "07:56",
+      "category": "issue",
+      "text": "Janet created duplicate/triplicate gym calendar events by processing KS's request multiple times across messages. Added deleteEvent and listEvents functions to calendar.js to enable cleanup and future event management"
+    },
+    {
+      "time": "08:02",
+      "category": "health",
+      "text": "KS taking second Mounjaro dose today (Feb 25), slightly off weekly schedule from Feb 17 start. Experiencing dry mouth as side effect in week 2"
+    },
+    {
+      "time": "08:47",
+      "category": "idea",
+      "text": "YouTube video \"I Turned Claude Code Into a Better OpenClaw\" — uses Anthropic Agent SDK to bridge local Claude Code to Telegram. Architecture very similar to Janet's Discord setup. Worth reviewing Agent SDK as potential upgrade from direct CLI subprocess spawning."
+    },
+    {
+      "time": "08:54",
+      "category": "decision",
+      "text": "Installed yt-dlp via Homebrew for direct YouTube transcript extraction — can now pull subtitles from any YouTube link KS sends without needing NotebookLM as middleman"
+    },
+    {
+      "time": "08:54",
+      "category": "issue",
+      "text": "Downloads folder (/Users/janet.bot/Downloads) not accessible from Claude Code due to permission restrictions — causes timeouts when trying to read files there. Need workaround: either grant permission or have KS copy files to ~/discord-bot/ first"
+    },
+    {
+      "time": "08:54",
+      "category": "followup",
+      "text": "KS downloaded the ClaudeClaw \"mega prompt\" MD file to Downloads — still needs to be read and evaluated for useful patterns. Blocked by Downloads folder permission issue"
+    },
+    {
+      "time": "08:54",
+      "category": "followup",
+      "text": "Google Drive OAuth re-authorization still pending — KS said she'll do it later. Auth script already updated with drive.readonly scope. After re-auth: build drive.js module and wire into bot.js"
+    },
+    {
+      "time": "09:03",
+      "category": "idea",
+      "text": "Agent SDK (@anthropic-ai/claude-agent-sdk) with bypassPermissions as potential replacement for claude-runner.js CLI subprocess spawning — could fix timeout issues caused by permission prompts. From ClaudeClaw rebuild prompt review."
+    },
+    {
+      "time": "09:08",
+      "category": "decision",
+      "text": "KS wants to investigate Agent SDK + SQLite session resumption as upgrade path for claude-runner.js — approved feasibility research, no implementation yet"
+    },
+    {
+      "time": "09:11",
+      "category": "decision",
+      "text": "KS prefers git-based rollback over parallel modules — commit current state, then modify claude-runner.js directly for Agent SDK upgrade. Revert via git checkout if needed."
+    }
+  ]
+}
