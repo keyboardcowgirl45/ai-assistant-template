@@ -358,6 +358,37 @@ client.once('ready', async () => {
   }
 });
 
+// --- Discord WebSocket health monitoring ---
+client.on('shardDisconnect', (event, shardId) => {
+  console.error(`[bot] Discord WebSocket disconnected (shard ${shardId}, code ${event.code}). Will auto-reconnect.`);
+});
+client.on('shardReconnecting', (shardId) => {
+  console.log(`[bot] Discord WebSocket reconnecting (shard ${shardId})...`);
+});
+client.on('shardResume', (shardId, replayedEvents) => {
+  console.log(`[bot] Discord WebSocket resumed (shard ${shardId}, replayed ${replayedEvents} events)`);
+});
+client.on('shardError', (error, shardId) => {
+  console.error(`[bot] Discord WebSocket error (shard ${shardId}): ${error.message}`);
+});
+
+// Periodic WebSocket liveness check — if ws is dead for 5+ min, exit and let launchd restart
+let _lastWsCheck = Date.now();
+setInterval(() => {
+  const wsStatus = client.ws?.status;
+  // discord.js ws status: 0 = READY, 1-4 = connecting states, 5+ = disconnected
+  if (wsStatus !== 0) {
+    const downFor = Date.now() - _lastWsCheck;
+    console.warn(`[bot] Discord WS status: ${wsStatus} (not ready for ${Math.round(downFor / 1000)}s)`);
+    if (downFor > 300000) { // 5 minutes
+      console.error('[bot] Discord WS dead for 5+ minutes — exiting for launchd restart');
+      process.exit(1);
+    }
+  } else {
+    _lastWsCheck = Date.now();
+  }
+}, 60000); // check every 60s
+
 // --- Message handler ---
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
@@ -754,7 +785,7 @@ function checkScheduledBriefings() {
         const botDir = path.join(__dirname);
         const status = execSync('git status --porcelain', { cwd: botDir, encoding: 'utf8' }).trim();
         if (status) {
-          execSync('git add *.js *.md *.json .gitignore journals/ memory/ store/', { cwd: botDir });
+          execSync('git add --ignore-errors *.js *.md *.json .gitignore journals/ memory/ store/', { cwd: botDir });
           const dateStr = new Date().toISOString().split('T')[0];
           execSync(`git commit -m "auto: nightly backup ${dateStr}"`, { cwd: botDir });
           execSync('git push', { cwd: botDir });
