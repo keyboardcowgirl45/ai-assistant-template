@@ -6,3 +6,4 @@ logs/
 bot.log
 google-credentials.json
 google-token.json
+.bot.pid

@@ -4,29 +4,33 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-// --- Duplicate process guard ---
-// Kill any other node bot.js processes before we start
+// --- Duplicate process guard (PID file + process scan) ---
+const PID_FILE = path.join(__dirname, '.bot.pid');
 try {
-  const myPid = process.pid;
-  const psOutput = execSync("ps aux | grep 'node.*bot\\.js' | grep -v grep", { encoding: 'utf8' });
-  const lines = psOutput.trim().split('\n');
-  for (const line of lines) {
-    const parts = line.trim().split(/\s+/);
-    const pid = parseInt(parts[1], 10);
-    if (pid && pid !== myPid) {
-      console.log(`[bot] Killing duplicate bot process (PID ${pid})`);
-      try { process.kill(pid, 'SIGTERM'); } catch {}
+  // Kill by PID file first
+  if (fs.existsSync(PID_FILE)) {
+    const oldPid = parseInt(fs.readFileSync(PID_FILE, 'utf8').trim(), 10);
+    if (oldPid && oldPid !== process.pid) {
+      try { process.kill(oldPid, 'SIGTERM'); console.log(`[bot] Killed previous bot via PID file (PID ${oldPid})`); } catch {}
     }
   }
-} catch {
-  // No other processes found — good
-}
+  // Also scan for any other bot.js processes we missed (belt + suspenders)
+  try {
+    const psOutput = execSync('pgrep -f "node.*bot\\.js"', { encoding: 'utf8', timeout: 3000 }).trim();
+    const pids = psOutput.split('\n').map(p => parseInt(p.trim(), 10)).filter(p => p && p !== process.pid);
+    for (const pid of pids) {
+      try { process.kill(pid, 'SIGTERM'); console.log(`[bot] Killed stale bot process (PID ${pid})`); } catch {}
+    }
+  } catch {} // pgrep returns non-zero if no matches — that's fine
+} catch {}
+fs.writeFileSync(PID_FILE, String(process.pid));
+// Clean up PID file on exit
+process.on('exit', () => { try { fs.unlinkSync(PID_FILE); } catch {} });
 const { loadRecent, append } = require('./memory.js');
 const { runClaude, warmup, onRecycle, flushMemory } = require('./claude-runner.js');
 const { searchWeb, needsSearch } = require('./search.js');
 const { formatForPrompt: formatReminders, processResponse: processReminders, getDue } = require('./reminders.js');
-const { callOllama } = require('./ollama-fallback.js');
-const { getTodayEvents, getUpcomingEvents, createEvent, formatForPrompt: formatCalendar, isAvailable: calendarAvailable } = require('./calendar.js');
+const { getTodayEvents, getTomorrowEvents, getUpcomingEvents, createEvent, formatForPrompt: formatCalendar, isAvailable: calendarAvailable } = require('./calendar.js');
 const { getLastNightSleep, formatForPrompt: formatOura } = require('./oura.js');
 const { formatForPrompt: formatLongMemory } = require('./long-memory.js');
 const { addEntry: journalAdd, formatForPrompt: formatJournal } = require('./journal.js');
@@ -37,6 +41,9 @@ const { sendEmail } = require('./email.js');
 const { searchMemory, formatForPrompt: formatMemsearch, syncJournalToMarkdown } = require('./memsearch-bridge.js');
 const { getWeather, formatForPrompt: formatWeather, needsWeather } = require('./weather.js');
 const { getRecentEmails, formatForPrompt: formatGmail, needsEmail } = require('./gmail-reader.js');
+const { getCryptoPrices, formatForPrompt: formatCrypto, needsCrypto } = require('./crypto.js');
+const { getRecentFiles, searchFiles: searchDrive, getDocContent, formatForPrompt: formatDrive, needsDrive } = require('./drive.js');
+const { checkForUpdates: checkClaudeUpdates, formatForPrompt: formatClaudeUpdates } = require('./claude-tracker.js');
 // Granola: now handled via MCP tools directly — no context injection needed
 
 // --- Context detection (only fetch expensive data when relevant) ---
@@ -116,10 +123,21 @@ function loadPromptFiles() {
 }
 
 /**
+ * Truncate a context section to a max character limit, cutting at last newline.
+ */
+function truncateSection(text, maxChars = 3000) {
+  if (!text || text.length <= maxChars) return text;
+  const truncated = text.slice(0, maxChars);
+  const lastNewline = truncated.lastIndexOf('\n');
+  return (lastNewline > 0 ? truncated.slice(0, lastNewline) : truncated) + '\n... (truncated)';
+}
+
+/**
  * Build the full prompt with all context.
  */
-function buildPrompt(personality, history, searchResults, reminders, calendarContext, username, userMessage, extra, ouraContext, healthTrendsContext, memsearchContext, weatherContext, gmailContext) {  const now = new Date().toLocaleString("en-SG", { timeZone: "Asia/Singapore", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
-  const parts = [personality, `\nCurrent date and time: ${now} SGT`];
+function buildPrompt(personality, history, searchResults, reminders, calendarContext, username, userMessage, extra, ouraContext, healthTrendsContext, memsearchContext, weatherContext, gmailContext, cryptoContext, driveContext) {  const now = new Date().toLocaleString("en-SG", { timeZone: "Asia/Singapore", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
+  const bootTime = _botStartTime.toLocaleString("en-SG", { timeZone: "Asia/Singapore", hour: "2-digit", minute: "2-digit", hour12: true });
+  const parts = [personality, `\nCurrent date and time: ${now} SGT\nBot last restarted: ${bootTime} SGT — all code changes before this time are live.`];
   if (reminders) {
     parts.push(`\n--- ACTIVE REMINDERS ---\n${reminders}\n--- END REMINDERS ---`);
   }
@@ -130,13 +148,19 @@ function buildPrompt(personality, history, searchResults, reminders, calendarCon
     parts.push(`\n--- HEALTH DATA ---\n${ouraContext}\n--- END HEALTH DATA ---`);
   }
   if (healthTrendsContext) {
-    parts.push(`\n--- HEALTH TRENDS ---\n${healthTrendsContext}\n--- END HEALTH TRENDS ---`);
+    parts.push(`\n--- HEALTH TRENDS ---\n${truncateSection(healthTrendsContext, 2000)}\n--- END HEALTH TRENDS ---`);
   }
   if (weatherContext) {
     parts.push(`\n--- WEATHER ---\n${weatherContext}\n--- END WEATHER ---`);
   }
   if (gmailContext) {
-    parts.push(`\n--- RECENT EMAILS ---\n${gmailContext}\n--- END EMAILS ---`);
+    parts.push(`\n--- RECENT EMAILS ---\n${truncateSection(gmailContext, 3000)}\n--- END EMAILS ---`);
+  }
+  if (cryptoContext) {
+    parts.push(`\n--- CRYPTO PRICES ---\n${cryptoContext}\n--- END CRYPTO ---`);
+  }
+  if (driveContext) {
+    parts.push(`\n--- GOOGLE DRIVE ---\n${truncateSection(driveContext, 2000)}\n--- END DRIVE ---`);
   }
   const deadlinesContext = formatDeadlines();
   if (deadlinesContext) {
@@ -151,7 +175,7 @@ function buildPrompt(personality, history, searchResults, reminders, calendarCon
     parts.push(`\n--- LONG-TERM NOTES ---\n${longMemory}\n--- END LONG-TERM NOTES ---`);
   }
   if (memsearchContext) {
-    parts.push(`\n--- SEMANTIC MEMORY (relevant past context) ---\n${memsearchContext}\n--- END SEMANTIC MEMORY ---`);
+    parts.push(`\n--- SEMANTIC MEMORY (relevant past context) ---\n${truncateSection(memsearchContext, 2000)}\n--- END SEMANTIC MEMORY ---`);
   }
   const journalContext = formatJournal();
   if (journalContext) {
@@ -161,7 +185,7 @@ function buildPrompt(personality, history, searchResults, reminders, calendarCon
     parts.push(`\n--- CONVERSATION HISTORY ---\n${history}\n--- END HISTORY ---`);
   }
   if (searchResults) {
-    parts.push(`\n--- WEB SEARCH RESULTS (searched just now) ---\n${searchResults}\n--- END SEARCH RESULTS ---\nUse these search results to answer KS's question. Summarize naturally — do not list URLs or say "according to search results".`);
+    parts.push(`\n--- WEB SEARCH RESULTS (searched just now) ---\n${truncateSection(searchResults, 3000)}\n--- END SEARCH RESULTS ---\nUse these search results to answer KS's question. Summarize naturally — do not list URLs or say "according to search results".`);
   }
   if (extra) {
     parts.push(extra);
@@ -173,21 +197,17 @@ function buildPrompt(personality, history, searchResults, reminders, calendarCon
 /**
  * Try Claude first, fall back to Ollama if Claude fails or times out.
  */
-async function getAIResponse(fullPrompt) {
+async function getAIResponse(fullPrompt, options = {}) {
   try {
-    const response = await runClaude(fullPrompt);
+    const response = await runClaude(fullPrompt, options);
     // Check for error-like responses from claude-runner
     if (response.includes('need to restart') || response.includes('trouble starting') || response.includes('dropped the connection')) {
       throw new Error('Claude unavailable');
     }
     return { text: response, source: 'claude' };
   } catch (err) {
-    console.warn(`[bot] Claude failed: ${err.message}, trying Ollama...`);
-    const ollamaResponse = await callOllama(fullPrompt);
-    if (ollamaResponse) {
-      return { text: ollamaResponse, source: 'ollama' };
-    }
-    return { text: "Both my brain and my backup brain are down. Give me a minute to reboot.", source: 'none' };
+    console.warn(`[bot] Claude failed: ${err.message}`);
+    return { text: "Something went wrong on my end — give me a moment and try again.", source: 'none' };
   }
 }
 
@@ -316,6 +336,7 @@ const client = new Client({
 });
 
 let _startupNotificationSent = false;
+const _botStartTime = new Date();
 
 client.once('ready', async () => {
   console.log(`[bot] Janet is online as ${client.user.tag}`);
@@ -384,12 +405,18 @@ client.on('messageCreate', async (message) => {
     // Async context — only fetch what's relevant, all in parallel
     const asyncFetches = [];
 
-    // Calendar (only when message is about schedule/time)
+    // Calendar (only when message is about schedule/time) — fetches today + tomorrow
     if (calendarAvailable() && needsCalendar(userMessage)) {
       console.log('[bot] Calendar context requested');
       asyncFetches.push(
-        getTodayEvents()
-          .then(events => ({ type: 'calendar', value: formatCalendar(events) }))
+        Promise.all([getTodayEvents(), getTomorrowEvents()])
+          .then(([today, tomorrow]) => {
+            const parts = [formatCalendar(today)];
+            if (tomorrow.length > 0) {
+              parts.push(formatCalendar(tomorrow, "Tomorrow's schedule"));
+            }
+            return { type: 'calendar', value: parts.join('\n') };
+          })
           .catch(err => { console.warn(`[bot] Calendar fetch failed: ${err.message}`); return { type: 'calendar', value: '' }; })
       );
     }
@@ -436,6 +463,26 @@ client.on('messageCreate', async (message) => {
       );
     }
 
+    // Crypto prices (only when asking about crypto/bitcoin/eth)
+    if (needsCrypto(userMessage)) {
+      console.log('[bot] Crypto context requested');
+      asyncFetches.push(
+        getCryptoPrices()
+          .then(data => ({ type: 'crypto', value: data ? formatCrypto(data) : '' }))
+          .catch(err => { console.warn(`[bot] Crypto fetch failed: ${err.message}`); return { type: 'crypto', value: '' }; })
+      );
+    }
+
+    // Google Drive (only when asking about files/documents/drive)
+    if (needsDrive(userMessage)) {
+      console.log('[bot] Drive context requested');
+      asyncFetches.push(
+        getRecentFiles(10)
+          .then(files => ({ type: 'drive', value: formatDrive(files) }))
+          .catch(err => { console.warn(`[bot] Drive fetch failed: ${err.message}`); return { type: 'drive', value: '' }; })
+      );
+    }
+
     // Semantic memory search (always — lightweight, local)
     asyncFetches.push(
       searchMemory(userMessage, 5)
@@ -461,6 +508,8 @@ client.on('messageCreate', async (message) => {
     let memsearchContext = '';
     let weatherContext = '';
     let gmailContext = '';
+    let cryptoContext = '';
+    let driveContext = '';
     for (const r of results) {
       if (r.type === 'calendar') calendarContext = r.value;
       else if (r.type === 'oura') ouraContext = r.value;
@@ -469,6 +518,8 @@ client.on('messageCreate', async (message) => {
       else if (r.type === 'memsearch') memsearchContext = r.value;
       else if (r.type === 'weather') weatherContext = r.value;
       else if (r.type === 'gmail') gmailContext = r.value;
+      else if (r.type === 'crypto') cryptoContext = r.value;
+      else if (r.type === 'drive') driveContext = r.value;
     }
 
     // Reminder + calendar instructions for Claude
@@ -521,7 +572,7 @@ When KS asks you to send an email, embed this tag in your response:
 - NEVER send an email without KS explicitly asking you to. Always confirm what you're about to send before embedding the tag.
 - If KS asks you to draft an email, show her the draft first and only send when she approves`;
 
-    const fullPrompt = buildPrompt(personality, history, searchResults, reminders, calendarContext, username, userMessage, reminderInstructions, ouraContext, healthTrendsContext, memsearchContext, weatherContext, gmailContext);
+    const fullPrompt = buildPrompt(personality, history, searchResults, reminders, calendarContext, username, userMessage, reminderInstructions, ouraContext, healthTrendsContext, memsearchContext, weatherContext, gmailContext, cryptoContext, driveContext);
 
     const startTime = Date.now();
     const { text: rawResponse, source } = await getAIResponse(fullPrompt);
@@ -642,7 +693,7 @@ async function runHeartbeat() {
   const startTime = Date.now();
 
   try {
-    const { text: response, source } = await getAIResponse(fullPrompt);
+    const { text: response, source } = await getAIResponse(fullPrompt, { countExchange: false });
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
     const trimmed = response.replace(/HEARTBEAT_OK/gi, '').trim();
@@ -703,7 +754,7 @@ function checkScheduledBriefings() {
         const botDir = path.join(__dirname);
         const status = execSync('git status --porcelain', { cwd: botDir, encoding: 'utf8' }).trim();
         if (status) {
-          execSync('git add -A', { cwd: botDir });
+          execSync('git add *.js *.md *.json .gitignore journals/ memory/ store/', { cwd: botDir });
           const dateStr = new Date().toISOString().split('T')[0];
           execSync(`git commit -m "auto: nightly backup ${dateStr}"`, { cwd: botDir });
           execSync('git push', { cwd: botDir });
@@ -735,6 +786,17 @@ function checkScheduledBriefings() {
       _briefingsSentToday.add(key);
       runScheduledBriefing('granola-debrief').catch(err =>
         console.error(`[briefing] Granola debrief error: ${err.message}`)
+      );
+    }
+  }
+
+  // 10am — Claude/Anthropic announcement check
+  if (hour === 10 && minute >= 0 && minute <= 10) {
+    const key = `${dateKey}-claude-tracker`;
+    if (!_briefingsSentToday.has(key)) {
+      _briefingsSentToday.add(key);
+      runScheduledBriefing('claude-tracker').catch(err =>
+        console.error(`[briefing] Claude tracker error: ${err.message}`)
       );
     }
   }
@@ -789,23 +851,61 @@ async function runScheduledBriefing(type) {
   let briefingInstructions = '';
 
   if (type === 'sleep') {
-    briefingInstructions = `
---- SCHEDULED BRIEFING: MORNING SLEEP ---
-This is KS's 7:30am sleep briefing. Pull her Oura sleep data from last night and give a brief, natural summary. Include:
-- Overall sleep score and how it compares to recent nights
-- Any standout metrics (great deep sleep, poor latency, etc.)
-- A brief note if you notice a pattern (e.g., declining sleep quality this week)
+    // Pre-fetch Oura sleep data, crypto prices, and today's calendar for morning briefing
+    let ouraContext = '';
+    let cryptoContext = '';
+    let calendarContext = '';
+    try {
+      const [sleepData, prices, todayEvents, tomorrowEvents] = await Promise.all([
+        getLastNightSleep().catch(err => { console.warn(`[briefing] Oura fetch failed: ${err.message}`); return null; }),
+        getCryptoPrices().catch(err => { console.warn(`[briefing] Crypto fetch failed: ${err.message}`); return null; }),
+        calendarAvailable() ? getTodayEvents().catch(err => { console.warn(`[briefing] Calendar fetch failed: ${err.message}`); return []; }) : [],
+        calendarAvailable() ? getTomorrowEvents().catch(err => { console.warn(`[briefing] Tomorrow calendar fetch failed: ${err.message}`); return []; }) : [],
+      ]);
+      ouraContext = formatOura(sleepData);
+      if (prices) cryptoContext = formatCrypto(prices);
+      const calParts = [formatCalendar(todayEvents)];
+      if (tomorrowEvents.length > 0) calParts.push(formatCalendar(tomorrowEvents, "Tomorrow's schedule"));
+      calendarContext = calParts.join('\n');
+    } catch (err) {
+      console.warn(`[briefing] Pre-fetch failed: ${err.message}`);
+    }
+    if (ouraContext) {
+      parts.push(`\n--- OURA SLEEP DATA ---\n${ouraContext}\n--- END OURA ---`);
+    }
+    if (cryptoContext) {
+      parts.push(`\n--- CRYPTO PRICES ---\n${cryptoContext}\n--- END CRYPTO ---`);
+    }
+    if (calendarContext) {
+      parts.push(`\n--- CALENDAR ---\n${calendarContext}\n--- END CALENDAR ---`);
+    }
 
-Keep it to 3-4 sentences max. Warm but concise — she just woke up.
+    briefingInstructions = `
+--- SCHEDULED BRIEFING: MORNING SLEEP + MARKETS ---
+This is KS's 7:30am morning briefing. Cover two things:
+
+1. **Sleep:** KS's Oura sleep data from last night is provided above. Give a brief, natural summary. Include:
+   - Overall readiness and sleep score and how they compare to recent nights
+   - Any standout metrics (great deep sleep, poor latency, low HRV, etc.)
+   - A brief note if you notice a pattern (e.g., declining sleep quality this week)
+   - Do NOT call the Oura MCP tool — the data is already in your context above.
+
+2. **Crypto:** If crypto prices are provided above, include BTC and ETH prices with 24h change. One line each, natural tone. If prices aren't available, skip this section.
+
+3. **Today's schedule:** If calendar data is provided above, mention what's on today (and tomorrow if shown). One line — just the highlights. If the calendar is clear, skip this.
+
+Keep the whole briefing to 5-6 sentences max. Warm but concise — she just woke up.
 Do NOT say HEARTBEAT_OK. This is a scheduled briefing that always sends.
 --- END BRIEFING INSTRUCTIONS ---`;
   } else if (type === 'granola-debrief') {
-    // Fetch today's calendar for the debrief
+    // Fetch today's + tomorrow's calendar for the debrief
     let calendarContext = '';
     if (calendarAvailable()) {
       try {
-        const events = await getTodayEvents();
-        calendarContext = formatCalendar(events);
+        const [today, tomorrow] = await Promise.all([getTodayEvents(), getTomorrowEvents()]);
+        const parts = [formatCalendar(today)];
+        if (tomorrow.length > 0) parts.push(formatCalendar(tomorrow, "Tomorrow's schedule"));
+        calendarContext = parts.join('\n');
       } catch (err) {
         console.warn(`[briefing] Calendar fetch failed: ${err.message}`);
       }
@@ -864,20 +964,16 @@ Do NOT say HEARTBEAT_OK. This is a scheduled briefing that always sends.
   }
 
   if (type === 'usage-report') {
-    // Fetch claude-monitor usage data by running it briefly and capturing output
+    // Fetch claude-monitor usage data via Python script (not the TUI)
     let usageData = '';
     try {
       const { execSync: execSyncLocal } = require('child_process');
-      // Run monitor and capture its TUI output (10s Node.js timeout as safety net)
-      const raw = execSyncLocal('/Users/janet.bot/.local/pipx/venvs/claude-monitor/bin/claude-monitor --plan max5 2>&1 || true', {
+      const raw = execSyncLocal('/usr/bin/python3 /Users/janet.bot/discord-bot/usage-check.py max5', {
         encoding: 'utf8',
-        timeout: 10000
+        timeout: 30000
       });
-      // Strip ANSI codes and TUI control sequences
-      usageData = raw.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/[^\x20-\x7E\n]/g, '').trim();
-      // Keep just the first frame (before any screen clears)
-      const lines = usageData.split('\n').filter(l => l.trim());
-      usageData = lines.slice(0, 30).join('\n');
+      const usage = JSON.parse(raw.trim());
+      usageData = `Plan: ${usage.plan}\nTokens: ${usage.tokens.pct}% used (${usage.tokens.used.toLocaleString()} / ${usage.tokens.limit.toLocaleString()})\nCost: ${usage.cost.pct}% used ($${usage.cost.used} / $${usage.cost.limit})\nMessages: ${usage.messages.pct}% used (${usage.messages.used} / ${usage.messages.limit})`;
     } catch (err) {
       usageData = `Could not fetch usage data: ${err.message}`;
     }
@@ -886,7 +982,7 @@ Do NOT say HEARTBEAT_OK. This is a scheduled briefing that always sends.
 --- SCHEDULED BRIEFING: DAILY USAGE REPORT ---
 This is KS's 9pm usage report. Summarize Claude Max subscription usage for today.
 
-Here is the raw output from claude-monitor:
+Here is the usage data:
 ${usageData}
 
 Give a brief summary:
@@ -896,6 +992,38 @@ Give a brief summary:
 
 Keep it to 2-3 sentences. Casual evening tone.
 Do NOT say HEARTBEAT_OK. This is a scheduled briefing that always sends.
+--- END BRIEFING INSTRUCTIONS ---`;
+  }
+
+  if (type === 'claude-tracker') {
+    // Check for new Claude/Anthropic announcements
+    let trackerContext = '';
+    try {
+      const updates = await checkClaudeUpdates();
+      if (updates) {
+        trackerContext = formatClaudeUpdates(updates);
+      }
+    } catch (err) {
+      console.warn(`[briefing] Claude tracker check failed: ${err.message}`);
+    }
+
+    if (!trackerContext) {
+      console.log('[briefing] Claude tracker: no new announcements — skipping briefing');
+      return; // Don't send a message if nothing new
+    }
+
+    parts.push(`\n--- CLAUDE/ANTHROPIC UPDATES ---\n${trackerContext}\n--- END UPDATES ---`);
+
+    briefingInstructions = `
+--- SCHEDULED BRIEFING: CLAUDE/ANTHROPIC UPDATE ALERT ---
+New Claude or Anthropic announcements were detected. For each item:
+
+1. Summarize what was announced in 1-2 sentences
+2. Assess relevance to our setup: Janet (Discord bot on Mac Mini, Claude Code CLI subprocess, Max subscription), KS's direct coding in Antigravity IDE, or the broader AI production pipeline
+3. If something is directly useful, say so clearly. If not relevant, say so briefly.
+
+Keep it scannable — bullet points are fine. Only include items that are genuinely new.
+Do NOT say HEARTBEAT_OK. This is a scheduled briefing that only sends when there are updates.
 --- END BRIEFING INSTRUCTIONS ---`;
   }
 

@@ -1,0 +1,24 @@
+{
+  "feeds": {
+    "Claude Code Releases": {
+      "lastId": "tag:github.com,2008:Repository/937253475/v2.1.62",
+      "lastDate": "2026-02-27T01:56:19.000Z"
+    },
+    "Anthropic SDK Releases": {
+      "lastId": "tag:github.com,2008:Repository/590187800/v0.84.0",
+      "lastDate": "2026-02-25T05:22:10.000Z"
+    },
+    "Claude Status": {
+      "lastId": "https://status.claude.com/incidents/0xc7ybw5wd3x",
+      "lastDate": "2026-02-27T19:43:42.000Z"
+    }
+  },
+  "lastSearchHashes": [
+    "-cm8ikb",
+    "-6xcvh3",
+    "4jdh2y",
+    "-7aei4l",
+    "-gtul9i"
+  ],
+  "lastCheck": "2026-02-28T02:02:19.453Z"
+}

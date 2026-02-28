@@ -1,0 +1,85 @@
+{
+  "date": "2026-02-26",
+  "entries": [
+    {
+      "time": "00:12",
+      "category": "decision",
+      "text": "KS considering downgrading from Max to Pro plan — Janet recommended tracking usage for a full week before deciding. Monitor daily usage percentages through early March."
+    },
+    {
+      "time": "00:12",
+      "category": "issue",
+      "text": "All four code changes confirmed live after 9:30am restart: (1) claude-runner.js activity-based timeout fix, (2) bot.js Ollama removal (code correct, stale comment at line 198), (3) bot.js duplicate process guard on startup, (4) bot.js claude-tracker.js integration for daily 10am checks."
+    },
+    {
+      "time": "00:12",
+      "category": "decision",
+      "text": "KS confirmed: always use Claude, never Ollama fallback. If Claude fails, show clear error instead of falling back to different model."
+    },
+    {
+      "time": "00:12",
+      "category": "followup",
+      "text": "claude-tracker.js created and tested — monitors GitHub RSS feeds + Brave Search for Claude announcements. Wired into bot.js for daily 10am checks. rss-parser npm package installed. Live since 9:30am restart."
+    },
+    {
+      "time": "00:12",
+      "category": "issue",
+      "text": "Duplicate message bug fixed — startup guard now kills any existing bot.js process before launching. Live since 9:30am restart."
+    },
+    {
+      "time": "00:12",
+      "category": "decision",
+      "text": "KS sees building Janet as a creative outlet and learning exercise toward her goal of becoming a Claude Code vibe coding expert. Not just a utility — it's a hobby she genuinely enjoys."
+    },
+    {
+      "time": "07:19",
+      "category": "issue",
+      "text": "KS sleep score dropped to 69 — late night working in Claude Code (not connected to Janet) suppressed deep sleep. Not stress-related, just late screen time and mental activation before bed."
+    },
+    {
+      "time": "08:33",
+      "category": "issue",
+      "text": "Claude process auto-recycle at 20 exchanges is being triggered prematurely by heartbeat checks (every 30min) consuming exchange slots. Caused \"something went wrong\" errors twice in 12 hours when scheduled briefings collided with recycle timing."
+    },
+    {
+      "time": "08:44",
+      "category": "decision",
+      "text": "Fix heartbeat exchange exhaustion: heartbeats now pass countExchange:false to claude-runner, so they don't consume the 20-exchange recycle limit. Prevents scheduled briefings from colliding with auto-recycle. Live since 9:30am restart."
+    },
+    {
+      "time": "10:30",
+      "category": "decision",
+      "text": "KS corrected Mediacorp VP vendor proposal deadline — due end of next week (approx March 6), not Feb 28 as previously noted from Granola"
+    },
+    {
+      "time": "17:17",
+      "category": "issue",
+      "text": "Memory persistence bug: daily memory log entries about \"pending restart\" were never updated after the 9:30am restart. Each process recycle loaded stale \"needs restart\" notes, causing Janet to repeatedly tell KS about restarts that already happened. Fixed by updating memory/2026-02-26.md entries to reflect live status."
+    },
+    {
+      "time": "21:05",
+      "category": "issue",
+      "text": "claude-monitor 9pm usage report timed out — root cause is execSync with 10s timeout against a TUI that never exits. spawnSync ETIMEDOUT when system busy. Fix: call claude-monitor Python library directly instead of scraping TUI output. Requires bot.js change + restart."
+    },
+    {
+      "time": "21:27",
+      "category": "followup",
+      "text": "KS feeling overwhelmed tonight after a stressful afternoon of work-from-home. Took a 1-hour nap mid-afternoon. Combined with low sleep score (69), risk of compounding poor sleep. Monitor tomorrow's Oura data."
+    },
+    {
+      "time": "21:27",
+      "category": "decision",
+      "text": "KS took classic car for vehicle inspection, washed it herself afterward as a light workout on a non-gym day."
+    },
+    {
+      "time": "21:27",
+      "category": "decision",
+      "text": "KS taking a sleeping pill tonight to ensure good rest before polo tomorrow morning. Context: two consecutive poor sleep nights (69 score tonight) plus afternoon stress and overwhelm."
+    },
+    {
+      "time": "21:28",
+      "category": "followup",
+      "text": "KS has weekly one-on-one polo lessons every Friday morning. Track as recurring commitment."
+    }
+  ]
+}

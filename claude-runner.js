@@ -32,8 +32,8 @@ let _onRecycle = null; // callback when process is recycled
  * Spawn a persistent Claude Code CLI process using stream-json mode.
  * The process stays alive between messages — only the first call is slow.
  *
- * No tools enabled — web search is handled externally via Brave Search API
- * and injected into the prompt before sending to Claude.
+ * All default tools are enabled (Bash, Read, Write, Edit, etc.).
+ * Web search is also injected externally via Brave Search API.
  */
 function ensureProcess() {
   if (_proc && !_proc.killed) return;
@@ -46,9 +46,11 @@ function ensureProcess() {
     '--verbose',
     '--dangerously-skip-permissions',
     '--no-session-persistence',
-    '--allowedTools', 'mcp__claude_ai_Granola__*,mcp__oura__*',
   ], {
-    env: { ...process.env, PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin' },
+    env: Object.fromEntries(
+      Object.entries({ ...process.env, PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin' })
+        .filter(([k]) => k !== 'CLAUDECODE')
+    ),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
@@ -65,17 +67,23 @@ function ensureProcess() {
   _proc.on('close', (code) => {
     console.log(`[claude-runner] Process exited with code ${code}`);
     _proc = null;
-    // Resolve any waiting request
+    _exchangeCount = 0;
+
+    // Resolve any waiting request with an error message
     if (_waiting) {
       clearTimeout(_waiting.timer);
       _waiting.resolve("Something went wrong — I need to restart. Try again in a moment.");
       _waiting = null;
     }
-    // Reject anything in the queue
-    for (const queued of _queue) {
-      queued.resolve("I had to restart. Try again?");
+
+    // If there are queued messages, respawn and process them
+    if (_queue.length > 0) {
+      console.log(`[claude-runner] Respawning to handle ${_queue.length} queued message(s)...`);
+      setTimeout(() => {
+        ensureProcess();
+        processQueue();
+      }, 1000);
     }
-    _queue = [];
   });
 
   _proc.on('error', (err) => {
@@ -95,6 +103,19 @@ function processBuffer() {
     try {
       const msg = JSON.parse(line);
       _waiting.lines.push(msg);
+
+      // Reset timeout on any activity (tool calls, text chunks, etc.)
+      // This way we only time out if Claude goes completely silent.
+      if (msg.type !== 'result' && _waiting.timer) {
+        clearTimeout(_waiting.timer);
+        const w = _waiting;
+        _waiting.timer = setTimeout(() => {
+          console.warn('[claude-runner] Response timed out (no activity)');
+          _waiting = null;
+          w.resolve("Sorry, I took too long thinking about that. Try again?");
+          processQueue();
+        }, TIMEOUT_MS);
+      }
 
       if (msg.type === 'result') {
         clearTimeout(_waiting.timer);
@@ -184,7 +205,7 @@ async function flushMemory() {
  * Send a prompt to the persistent Claude process and await the response.
  * If a message is already in-flight, this queues up and waits its turn.
  */
-async function runClaude(fullPrompt) {
+async function runClaude(fullPrompt, { countExchange = true } = {}) {
   // Auto-recycle: if we've hit the exchange limit, flush memory then kill and respawn
   if (_proc && !_proc.killed && _exchangeCount >= MAX_EXCHANGES && !_waiting) {
     console.log(`[claude-runner] Auto-recycling after ${_exchangeCount} exchanges`);
@@ -213,8 +234,10 @@ async function runClaude(fullPrompt) {
       return;
     }
 
-    _exchangeCount++;
-    console.log(`[claude-runner] Exchange ${_exchangeCount}/${MAX_EXCHANGES}`);
+    if (countExchange) {
+      _exchangeCount++;
+    }
+    console.log(`[claude-runner] Exchange ${_exchangeCount}/${MAX_EXCHANGES}${countExchange ? '' : ' (heartbeat, not counted)'}`);
     sendMessage(fullPrompt, resolve);
   });
 }
