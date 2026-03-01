@@ -1,0 +1,30 @@
+{
+  "date": "2026-03-01",
+  "entries": [
+    {
+      "time": "07:08",
+      "category": "issue",
+      "text": "Bot received unexplained SIGTERM at ~4am causing double restart — likely macOS system maintenance or launchd session cycling. Not caused by bot code. Also nightly git push failing due to .gitignore conflict with credential files."
+    },
+    {
+      "time": "07:47",
+      "category": "decision",
+      "text": "Oura fix: removed silent fallback to stale data in oura.js, moved sleep briefing from 7:30 to 7:45am to give Oura API more processing time. Both changes need restart."
+    },
+    {
+      "time": "09:07",
+      "category": "decision",
+      "text": "KS wants Granola meeting summaries as one paragraph only, no citation links. Keep it clean and concise."
+    },
+    {
+      "time": "14:59",
+      "category": "health",
+      "text": "KS had a smoothie before polo today — helped with energy and avoided Mounjaro-related nausea. Good pre-polo fueling strategy during adjustment period."
+    },
+    {
+      "time": "18:30",
+      "category": "health",
+      "text": "Mounjaro week 2 check-in: appetite noticeably reduced, planning next dose tonight (Sunday). Only side effect so far is exercise nausea, managed by pre-polo smoothie. On track."
+    }
+  ]
+}

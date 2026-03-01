@@ -42,15 +42,18 @@ async function getLastNightSleep() {
     ]);
 
     // Get today's daily sleep score (Oura tags by wake-up date)
-    const sleepDay = dailySleep?.find(d => d.day === today) || dailySleep?.[dailySleep.length - 1];
-    const readinessDay = readiness?.find(d => d.day === today) || readiness?.[readiness.length - 1];
+    // Only use today's data — never fall back to yesterday's stale scores
+    const sleepDay = dailySleep?.find(d => d.day === today) || null;
+    const readinessDay = readiness?.find(d => d.day === today) || null;
 
     // Find the main overnight sleep session (longest, tagged today)
     const mainSession = sleepSessions
       ?.filter(s => s.day === today && s.type !== 'rest')
       ?.sort((a, b) => (b.total_sleep_duration || 0) - (a.total_sleep_duration || 0))?.[0];
 
-    if (!sleepDay && !readinessDay && !mainSession) return null;
+    if (!sleepDay && !readinessDay && !mainSession) {
+      return 'Oura is still processing last night\'s sleep data — not ready yet.';
+    }
 
     const lines = [];
 

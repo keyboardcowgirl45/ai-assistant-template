@@ -785,7 +785,7 @@ function checkScheduledBriefings() {
         const botDir = path.join(__dirname);
         const status = execSync('git status --porcelain', { cwd: botDir, encoding: 'utf8' }).trim();
         if (status) {
-          execSync('git add --ignore-errors *.js *.md *.json .gitignore journals/ memory/ store/', { cwd: botDir });
+          execSync('git add --ignore-errors *.js *.md package.json package-lock.json .gitignore journals/ memory/ store/', { cwd: botDir });
           const dateStr = new Date().toISOString().split('T')[0];
           execSync(`git commit -m "auto: nightly backup ${dateStr}"`, { cwd: botDir });
           execSync('git push', { cwd: botDir });
@@ -799,8 +799,8 @@ function checkScheduledBriefings() {
     }
   }
 
-  // 7:30am — Sleep briefing
-  if (hour === 7 && minute >= 25 && minute <= 35) {
+  // 7:45am — Sleep briefing (delayed from 7:30 to give Oura time to process)
+  if (hour === 7 && minute >= 40 && minute <= 50) {
     const key = `${dateKey}-sleep`;
     if (!_briefingsSentToday.has(key)) {
       _briefingsSentToday.add(key);
@@ -963,10 +963,7 @@ Do NOT say HEARTBEAT_OK. This is a scheduled briefing that always sends.
 --- SCHEDULED BRIEFING: MORNING GRANOLA DEBRIEF ---
 This is KS's 8:30am workday kickoff. Do the following:
 
-1. **Yesterday's meetings:** Use the Granola MCP tools (query_granola_meetings or list_meetings) to pull yesterday's meetings. Surface:
-   - Key decisions made
-   - Action items and follow-ups assigned to KS
-   - Anything left unresolved
+1. **Yesterday's meetings:** Use the Granola MCP tools (query_granola_meetings or list_meetings) to pull yesterday's meetings. For each meeting, write a single concise paragraph covering key decisions, action items, and anything unresolved. Do NOT include Granola links or citation URLs.
 
 2. **Today's prep:** Look at today's calendar (provided above). If any of today's meetings involve people or topics from recent Granola notes, flag relevant context — "Last time you met with X, you discussed Y and agreed to Z."
 
