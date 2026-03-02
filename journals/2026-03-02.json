@@ -1,0 +1,35 @@
+{
+  "date": "2026-03-02",
+  "entries": [
+    {
+      "time": "08:30",
+      "category": "issue",
+      "text": "KS reports time blindness around bedtime — thought she went to bed at midnight but Oura logged 2:43am. Possible pattern worth monitoring, especially with Mounjaro adjustment and low sleep scores (63, readiness 64)"
+    },
+    {
+      "time": "09:54",
+      "category": "decision",
+      "text": "KS cancelled Monday gym session due to poor sleep (4h 44m, readiness 64). Prioritizing recovery, will resume Wednesday."
+    },
+    {
+      "time": "19:53",
+      "category": "followup",
+      "text": "Claude/Anthropic news Mar 2: Claude hit #1 App Store after Pentagon blacklist for refusing to remove military safeguards. Anthropic acquired Vercept for computer-use capabilities. Chinese AI lab misuse discovered (24K fraudulent accounts). Claude Cowork enterprise updates launched."
+    },
+    {
+      "time": "19:57",
+      "category": "decision",
+      "text": "KS decides Obsidian would benefit her personally as a second brain for managing Refinery, X3D, and Gengis. Key pain points: hard to link ideas across companies, doubling up on work without realizing. Won't replace Janet's memory system but complements it for KS's personal knowledge management."
+    },
+    {
+      "time": "21:20",
+      "category": "health",
+      "text": "KS took Mounjaro dose tonight (Mar 2). Feeling nauseous even after a light dinner — different from previous exercise-related nausea. Pattern emerging: nausea regardless of activity, may be dose-related rather than food-timing-related. Week 2 of treatment."
+    },
+    {
+      "time": "21:22",
+      "category": "issue",
+      "text": "KS's long-time art director (several years) has indicated he wants to quit. KS suspects there's more to his stated reason. Major impact on company operations — leaves them in a lurch. KS feeling overwhelmed and frustrated."
+    }
+  ]
+}
