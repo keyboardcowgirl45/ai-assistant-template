@@ -71,6 +71,18 @@ async function getLastNightSleep() {
       if (mainSession.average_hrv || mainSession.average_heart_rate || mainSession.lowest_heart_rate) {
         lines.push(`  HRV: ${mainSession.average_hrv || '?'} | Avg HR: ${mainSession.average_heart_rate || '?'} | Lowest HR: ${mainSession.lowest_heart_rate || '?'}`);
       }
+      // Restlessness and awake time
+      if (mainSession.restless_periods != null) {
+        lines.push(`  Restless periods: ${mainSession.restless_periods} | Awake: ${fmtDuration(mainSession.awake_time)}`);
+      }
+    }
+    // Body temperature from readiness
+    if (readinessDay) {
+      const rc = readinessDay.contributors || {};
+      const tempParts = [];
+      if (rc.body_temperature != null) tempParts.push(`Body temp score: ${rc.body_temperature}/100`);
+      if (readinessDay.temperature_deviation != null) tempParts.push(`Deviation: ${readinessDay.temperature_deviation > 0 ? '+' : ''}${readinessDay.temperature_deviation}°C`);
+      if (tempParts.length > 0) lines.push(`  ${tempParts.join(' | ')}`);
     }
 
     return lines.join('\n');
