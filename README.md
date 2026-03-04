@@ -18,12 +18,21 @@ A full-featured personal AI assistant that runs on Discord, powered by Claude vi
 
 ## Quick Start
 
-1. Clone this repo
-2. Copy `.env.example` to `.env` and fill in your keys
-3. Customise the personality files (`SOUL.md`, `USER.md`, `IDENTITY.md`)
-4. Run `npm install` then `npm start`
+Open your terminal and run:
 
-**Full setup walkthrough:** [SETUP-GUIDE.md](SETUP-GUIDE.md)
+```bash
+git clone https://github.com/keyboardcowgirl45/ai-assistant-template.git discord-bot
+cd discord-bot
+npm install
+```
+
+Then:
+
+1. Copy `.env.example` to `.env` and fill in your keys
+2. Customise the personality files (`SOUL.md`, `USER.md`, `IDENTITY.md`)
+3. Run `npm start`
+
+**Full setup walkthrough:** [SETUP-GUIDE.md](SETUP-GUIDE.md) — covers everything step by step, including how to get your API keys and set up Discord.
 
 ## Prerequisites
 
