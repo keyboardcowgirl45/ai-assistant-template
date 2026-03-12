@@ -15,6 +15,8 @@ A full-featured personal AI assistant that runs on Discord, powered by Claude vi
 - **Daily journal** — automatic conversation logging with semantic search
 - **Proactive check-ins** — heartbeat system that reaches out when something needs attention
 - **Image generation** — create images via Google Gemini (optional)
+- **Gemini fallback** — automatic failover to Google Gemini when Claude is down
+- **Canary phrase** — identity verification to confirm you're talking to the real bot
 
 ## Quick Start
 
@@ -54,6 +56,7 @@ Then:
 | `MEMORY_INSTRUCTIONS.md` | How the memory system works |
 | `bot.js` | Main bot logic |
 | `claude-runner.js` | Claude Code CLI integration |
+| `gemini-fallback.js` | Gemini fallback when Claude is down |
 
 ## Architecture
 
@@ -66,6 +69,18 @@ Discord message
 ```
 
 The bot runs Claude as a persistent process, recycling every 20 exchanges. Memory, journals, and reminders persist across restarts.
+
+### Fallback Chain
+
+When Claude goes down (auth errors, outages, timeouts), the bot automatically switches to Google Gemini. When Claude recovers, it switches back and notifies you. This means your assistant stays available even during Claude outages.
+
+```
+Claude (primary) → Gemini (fallback) → "I'm down" message
+```
+
+### Canary Phrase
+
+Your bot has a secret canary phrase set in `SOUL.md`. If you suspect you're talking to a fallback model instead of the real bot, ask for the canary phrase. Only the real bot (with the full system prompt loaded) knows it. Think of it as a secret handshake.
 
 ## License
 

@@ -194,20 +194,57 @@ function buildPrompt(personality, history, searchResults, reminders, calendarCon
   return parts.join('\n');
 }
 
+// --- Fallback state ---
+const { callGemini, isGeminiAvailable } = require('./gemini-fallback.js');
+let lastBackend = 'claude'; // tracks which backend served the last response ('claude', 'gemini')
+
 /**
- * Try Claude first, fall back to Ollama if Claude fails or times out.
+ * Try Claude first, fall back to Gemini if Claude fails or times out.
  */
 async function getAIResponse(fullPrompt, options = {}) {
   try {
     const response = await runClaude(fullPrompt, options);
     // Check for error-like responses from claude-runner
-    if (response.includes('need to restart') || response.includes('trouble starting') || response.includes('dropped the connection')) {
-      throw new Error('Claude unavailable');
+    // Only treat SHORT responses as errors — real error messages from claude-runner
+    // are always brief. Long responses that happen to mention these phrases are
+    // legitimate Claude replies, not errors.
+    if (response.length < 200 && (response.includes('need to restart') || response.includes('trouble starting') || response.includes('dropped the connection') || response.includes('Failed to authenticate') || response.includes('authentication_error') || response.includes('API Error'))) {
+      throw new Error('Claude unavailable: ' + response.slice(0, 100));
     }
-    return { text: response, source: 'claude' };
+    // If we were on fallback, notify recovery
+    let prefix = '';
+    if (lastBackend !== 'claude') {
+      prefix = "Claude is back online \u2014 I'm back to full power.\n\n";
+      console.log(`[bot] Claude recovered — switching back from ${lastBackend} fallback`);
+    }
+    lastBackend = 'claude';
+    return { text: prefix + response, source: 'claude' };
   } catch (err) {
     console.warn(`[bot] Claude failed: ${err.message}`);
-    return { text: "Something went wrong on my end — give me a moment and try again.", source: 'none' };
+
+    // Try Gemini fallback
+    console.log('[bot] Attempting Gemini fallback...');
+    try {
+      const geminiKey = process.env.GEMINI_API_KEY;
+      if (!geminiKey) throw new Error('No GEMINI_API_KEY');
+
+      const geminiResponse = await callGemini(fullPrompt, geminiKey);
+
+      // One-time failover notice
+      let prefix = '';
+      if (lastBackend === 'claude') {
+        prefix = "Heads up \u2014 Claude is down so I'm running on a backup brain. I'll be a bit less capable until it's back.\n\n";
+        console.log('[bot] Switched to Gemini fallback');
+      }
+      lastBackend = 'gemini';
+
+      console.log(`[bot] Gemini fallback succeeded (${geminiResponse.length} chars)`);
+      return { text: prefix + geminiResponse, source: 'gemini' };
+    } catch (geminiErr) {
+      console.warn(`[bot] Gemini fallback failed: ${geminiErr.message}`);
+      console.error(`[bot] All backends failed. Claude: ${err.message}, Gemini: ${geminiErr.message}`);
+      return { text: "Both Claude and Gemini are down right now. Try again in a few minutes.", source: 'none' };
+    }
   }
 }
 

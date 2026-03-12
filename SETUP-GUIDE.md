@@ -103,13 +103,22 @@ KS_DISCORD_ID=paste_your_discord_user_id_here
 
 The rest are optional — enable them as you need features:
 
+**Recommended (Gemini fallback):**
+
+| Variable | What It Does | Where to Get It |
+|----------|-------------|----------------|
+| `GEMINI_API_KEY` | Fallback brain when Claude is down + image generation | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (free) |
+
+Claude has occasional outages. Without Gemini configured, your bot goes completely silent during downtime. Setting this up takes 30 seconds and is free.
+
+**Optional features:**
+
 | Variable | What It Does | Where to Get It |
 |----------|-------------|----------------|
 | `BRAVE_SEARCH_API_KEY` | Web search | [brave.com/search/api](https://brave.com/search/api/) (free tier available) |
 | `OURA_API_TOKEN` | Sleep/health data | [cloud.ouraring.com/personal-access-tokens](https://cloud.ouraring.com/personal-access-tokens) |
 | `GMAIL_USER` | Send emails | Your Gmail address |
 | `GMAIL_APP_PASSWORD` | Send emails | Google Account → Security → App Passwords |
-| `GEMINI_API_KEY` | Image generation | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 
 ---
 
@@ -141,11 +150,20 @@ This is the fun part — you're defining who your assistant is. There are four f
 
 This is your assistant's personality, communication style, and values. Open `SOUL.md` and replace all the `[bracketed placeholders]` with your details. Key sections:
 
+- **Canary Phrase**: A secret phrase only your real bot knows (see below)
 - **Who You Are**: Your bot's name and relationship to you
 - **Personality**: The vibe you want (warm? sarcastic? formal?)
 - **Communication Style**: How it should talk (concise? detailed? emoji-friendly?)
 - **What You Know About [Owner]**: Facts about you it should always know
 - **Your Capabilities**: What it can do on the machine
+
+#### Setting Up Your Canary Phrase
+
+The canary phrase is a secret handshake between you and your assistant. Replace `[Your canary phrase here]` in `SOUL.md` with a unique sentence that's personal and memorable. For example:
+
+> "Three golden retrievers chase tennis balls across Marina Bay at sunset."
+
+**Why this matters:** When Claude goes down and Gemini takes over as a fallback, the fallback model doesn't have your full system prompt — so it won't know the canary phrase. If you suspect you're not talking to the real bot, ask: *"What's the canary phrase?"* If it can't answer, you're on fallback. Simple identity verification.
 
 **Tip**: Ask Claude to help you write this. Paste the template and say: *"Help me fill this out. I'm [your name], I work in [field], my hobbies are [X], and I want my assistant to be [personality description]."*
 
@@ -345,11 +363,31 @@ If something needs your attention, it'll DM you. Otherwise, it stays quiet.
 | `long-memory.js` | Persistent memory notes | Yes (no config needed) |
 | `deadlines.js` | Deadline tracking | Yes (no config needed) |
 | `ideas.js` | Idea parking lot | Yes (no config needed) |
+| `gemini-fallback.js` | Gemini fallback when Claude is down | Recommended (needs API key) |
 | `claude-tracker.js` | Claude usage monitoring | Optional |
 
 ---
 
 ## Customization Tips
+
+### How the Gemini Fallback Works
+
+Claude has occasional outages (auth errors, rate limits, service interruptions). When this happens, your bot automatically switches to Google Gemini as a backup brain. Here's the flow:
+
+1. Bot tries Claude first (primary)
+2. If Claude fails, it tries Gemini (fallback)
+3. If both fail, it shows an honest "I'm down" message
+4. When Claude recovers, it switches back and tells you
+
+The fallback is **automatic** — you don't need to do anything. Your bot stays available during Claude outages, just with reduced capabilities (no file access, no integrations, no memory context).
+
+**Important:** The Gemini fallback uses a generic system prompt, not your full SOUL.md. This means:
+- The fallback won't have your bot's full personality
+- It won't know your canary phrase (that's the point — you can verify identity)
+- It can't access tools, files, or integrations on the host machine
+- It's a stopgap, not a replacement — responses will be more generic
+
+To set up: just add your `GEMINI_API_KEY` to `.env`. The code handles everything else.
 
 ### Change the Heartbeat Interval
 
@@ -403,6 +441,7 @@ If you don't have an Oura Ring or don't need calendar integration, the bot handl
 |---------|------|-------|
 | Claude Max | $100/mo | Powers the AI brain — this is the main cost |
 | Discord | Free | |
+| Google Gemini | Free | Fallback brain + image generation (free tier) |
 | Brave Search | Free tier | 2,000 queries/month free |
 | Google Calendar | Free | Via Google Cloud (free tier) |
 | Gmail | Free | Needs an App Password |
